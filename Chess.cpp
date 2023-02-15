@@ -4,8 +4,6 @@
 Chess::Chess(const std::string& fen)
 	: m_Board(BoardFromFen(fen)), m_Playing(fen.contains(" w ") ? Player::White : Player::Black),
 	m_EnPassant(ParseEnPassantFromFen(fen)){
-
-	std::cout << "Contructed board from fen" << std::endl;
 }
 
 std::ostream& operator<<(std::ostream& ostream, const Chess& chess) {

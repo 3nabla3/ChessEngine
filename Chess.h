@@ -101,6 +101,7 @@ public:
 
 	[[nodiscard]] std::string GetFen() const;
 	[[nodiscard]] const std::string& GetPGN() const { return m_PGN; }
+	[[nodiscard]] const int GetFullMoves() const {return m_fullMoves;}
 	[[nodiscard]] inline Player GetCurrentPlayer() const { return m_Playing; }
 	[[nodiscard]] inline Player GetNotCurrentPlayer() const {
 		return m_Playing == Player::White ? Player::Black : Player::White;
