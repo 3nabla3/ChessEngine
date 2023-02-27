@@ -3,8 +3,10 @@
 
 Chess::Chess(const std::string& fen)
 	: m_Board(BoardFromFen(fen)), m_Playing(fen.contains(" w ") ? Player::White : Player::Black),
-	m_EnPassant(ParseEnPassantFromFen(fen)){
-}
+	m_EnPassant(ParseEnPassantFromFen(fen)),
+	m_WhiteCastlingRights(ParseCastlingRightsFromFen(fen, Player::White)),
+	m_BlackCastlingRights(ParseCastlingRightsFromFen(fen, Player::Black))
+	{}
 
 std::ostream& operator<<(std::ostream& ostream, const Chess& chess) {
 	ostream << chess.GetFen() << std::endl;
@@ -43,8 +45,18 @@ std::string Chess::GetFen() const {
 	else
 		fen += " b";
 
-	// TODO: deal w castling right
-	fen += " -";
+	fen += " ";
+	if (m_WhiteCastlingRights.first)
+		fen += "K";
+	if (m_WhiteCastlingRights.second)
+		fen += "Q";
+	if (m_BlackCastlingRights.first)
+		fen += "k";
+	if (m_BlackCastlingRights.second)
+		fen += "q";
+	if (m_WhiteCastlingRights == std::pair(false, false) and
+		m_BlackCastlingRights == std::pair(false, false))
+		fen += "-";
 
 	if (m_EnPassant)
 		fen += " " + Coord2Chess(m_EnPassant.value());
@@ -445,6 +457,37 @@ std::optional<Coord> Chess::ParseEnPassantFromFen(const std::string& fen) {
 		return Chess2Coord(&fen[charIndex]);
 
 	return {};
+}
+
+CastlingRights Chess::ParseCastlingRightsFromFen(const std::string& fen, Player player) {
+	// if we split the fen by spaces, what index is the Castling info
+	int indexInFen = 2;
+	// current in the split array
+	int index = 0;
+	// current index of char in string
+	int charIndex = 0;
+
+	while (index < indexInFen) {
+		if (fen[charIndex++] == ' ')
+			index++;
+	}
+
+	CastlingRights cr{false, false};
+	// if there is no castling rights
+	if (fen[charIndex] == '-')
+		return cr;
+
+	// iterate over the castling rights
+	while (fen[charIndex] != ' ') {
+		if (fen[charIndex] == 'K' and player == Player::White ||
+			fen[charIndex] == 'k' and player == Player::Black)
+			cr.first = true;
+		else if (fen[charIndex] == 'Q' and player == Player::White ||
+				 fen[charIndex] == 'q' and player == Player::Black)
+			cr.second = true;
+		charIndex++;
+	}
+	return cr;
 }
 
 Chess& Chess::ApplyMove(const Move& move) {

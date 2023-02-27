@@ -14,6 +14,7 @@ static std::ostream& operator<<(std::ostream& ostream, const Player player){
 
 typedef std::array<char, 8 * 8> Board;
 typedef std::pair<int, int> Coord;
+typedef std::pair<bool, bool> CastlingRights;
 
 typedef struct Move {
 	explicit Move(Coord from, Coord to)
@@ -137,6 +138,7 @@ public:
 
 	Chess& ApplyMove(const Move& move);
 	Chess& ApplyMove(const Coord& from, const Coord& to) { return ApplyMove({from, to, std::nullopt}); }
+	Chess& ApplyMove(const std::string& notation) { return ApplyMove(Chess2Move(notation)); }
 
 	static Board BoardFromFen(const std::string& fen);
 	friend std::ostream& operator<<(std::ostream& ostream, const Chess& chess);
@@ -154,7 +156,9 @@ private:
 
 	[[nodiscard]] bool IsCurrentPlayerPiece(char piece) const;
 
-	[[nodiscard]] static std::optional<Coord> ParseEnPassantFromFen(const std::string& fen) ;
+	[[nodiscard]] static std::optional<Coord> ParseEnPassantFromFen(const std::string& fen);
+	[[nodiscard]] static CastlingRights ParseCastlingRightsFromFen(const std::string& fen, Player player);
+
 
 	constexpr static int CoordToIndexInBoard(int col, int row) {
 		if (col < 0 or col > SIZE - 1 or row < 0 or row > SIZE - 1)
@@ -163,6 +167,11 @@ private:
 	}
 
 	std::optional<Coord> m_EnPassant;
+
+	// king side, queen side
+	CastlingRights m_WhiteCastlingRights;
+	CastlingRights m_BlackCastlingRights;
+
 	Player m_Playing = Player::White;
 	Board m_Board{};
 	int m_halfMovesRule = 0;
