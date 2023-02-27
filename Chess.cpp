@@ -46,8 +46,10 @@ std::string Chess::GetFen() const {
 	// TODO: deal w castling right
 	fen += " -";
 
-	// TODO: deal w en passant
-	fen += " -";
+	if (m_EnPassant)
+		fen += " " + Coord2Chess(m_EnPassant.value());
+	else
+		fen += " -";
 
 	// deal w halfmove
 	fen += " " + std::to_string(m_halfMovesRule);
@@ -446,43 +448,69 @@ std::optional<Coord> Chess::ParseEnPassantFromFen(const std::string& fen) {
 }
 
 Chess& Chess::ApplyMove(const Move& move) {
-	if (IsMoveLegal(move)) {
-		const auto& from = move.from;
-		const auto& to = move.to;
-
-		char& pieceToMove = GetPieceRef(from.first, from.second);
-		char& pieceToReplace = GetPieceRef(to.first, to.second);
-		// if there is a promotion, replace the piece
-		if (move.promote)
-			pieceToReplace = move.promote.value();
-		else
-			pieceToReplace = pieceToMove;
-		pieceToMove = ' ';
-
-		// check if a pawn was moved or if a piece was taken
-		if (pieceToMove == 'p' or pieceToMove == 'P' or pieceToReplace != ' ')
-			m_halfMovesRule = 0;
-		else
-			m_halfMovesRule++;
-
-		std::stringstream ss;
-
-		// keep track of the full moves
-		if (m_Playing == Player::Black)
-			m_fullMoves++;
-		else
-			ss << m_fullMoves << ". ";
-		ss << move.from << move.to;
-		if (move.promote)
-			ss << "=" << move.promote.value();
-		ss << " ";
-
-		m_PGN += ss.str();
-
-		m_Playing = GetNotCurrentPlayer();
-	}
-	else
+	if (!IsMoveLegal(move)) {
 		std::cout << "Move is not legal!" << std::endl;
+		exit(1);
+	}
+
+	const auto& from = move.from;
+	const auto& to = move.to;
+
+	char& pieceToMove = GetPieceRef(from.first, from.second);
+	char& pieceToReplace = GetPieceRef(to.first, to.second);
+
+
+
+	// if there is a promotion, replace the piece
+	if (move.promote)
+		pieceToReplace = move.promote.value();
+	else
+		pieceToReplace = pieceToMove;
+
+	// if the move played was en passant, remove the correct piece
+	if (to == m_EnPassant) {
+		if (pieceToMove == 'p')
+			GetPieceRef(to.first, to.second + 1) = ' ';
+		else if (pieceToMove == 'P')
+			GetPieceRef(to.first, to.second - 1) = ' ';
+	}
+
+	// if a pawn is moving and it allows en passant
+	if (pieceToMove == 'p' and from.second == 6 and to.second == 4) {
+		if (to.first - 1 >= 0 and GetPiece(to.first - 1, 4) == 'P' ||
+		    to.first + 1 <= 7 and GetPiece(to.first + 1, 4) == 'P')
+			m_EnPassant = Coord({to.first, 5});
+	} else if (pieceToMove == 'P' and from.second == 1 and to.second == 3) {
+		if (to.first - 1 >= 0 and GetPiece(to.first - 1, 3) == 'p' ||
+		    to.first + 1 <= 7 and GetPiece(to.first + 1, 3) == 'p')
+			m_EnPassant = Coord({to.first, 2});
+	} else {
+		m_EnPassant = {};
+	}
+	pieceToMove = ' ';
+
+	// check if a pawn was moved or if a piece was taken
+	if (pieceToMove == 'p' or pieceToMove == 'P' or pieceToReplace != ' ')
+		m_halfMovesRule = 0;
+	else
+		m_halfMovesRule++;
+
+	std::stringstream ss;
+
+	// keep track of the full moves
+	if (m_Playing == Player::Black)
+		m_fullMoves++;
+	else
+		ss << m_fullMoves << ". ";
+
+	ss << move.from << move.to;
+	if (move.promote)
+		ss << "=" << move.promote.value();
+	ss << " ";
+
+	m_PGN += ss.str();
+
+	m_Playing = GetNotCurrentPlayer();
 
 	// delete the cache
 	m_LegalMovesCache.clear();

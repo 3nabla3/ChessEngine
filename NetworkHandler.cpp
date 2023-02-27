@@ -1,81 +1,125 @@
+#include <curlpp/Easy.hpp>
+#include <curlpp/Options.hpp>
+#include <curlpp/Infos.hpp>
 #include "NetworkHandler.h"
-#include <curl/curl.h>
-#include <sstream>
-#include <thread>
 
-std::string NetworkHandler::s_SubmitMoveEndpoint;
-std::string NetworkHandler::s_GetTimeLeftEndpoint;
+NetworkHandler* NetworkHandler::s_Instance = nullptr;
 
-static size_t WriteCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-	((std::string*)userp)->append((char*)contents, size * nmemb);
-	return size * nmemb;
+void NetworkHandler::Init(const std::string& socket) {
+	std::string prefix = "http://" + socket;
+
+	m_SubmitMoveEndpoint = prefix + "/submitmove";
+	m_GetTimeLeftEndpoint = prefix + "/gettimeleft";
+	m_LoginEndpoint = prefix + "/login";
+	m_GetMoveEndpoint = prefix + "/getmove";
 }
 
-void NetworkHandler::Init(const std::string& hostnamePort) {
-	std::stringstream ss1;
-	ss1 << "http://" << hostnamePort << "/submitmove";
-	s_SubmitMoveEndpoint = ss1.str();
-
-	std::stringstream ss2;
-	ss2 << "http://" << hostnamePort << "/gettimeleft";
-	s_GetTimeLeftEndpoint = ss2.str();
+StatusCode NetworkHandler::Login(const std::string& username) {
+	std::string postData("user=" + username);
+	return Post(m_LoginEndpoint, postData);
 }
 
-ErrorCode NetworkHandler::SendMove(const std::string& move) {
-	using namespace std::chrono_literals;
-	std::stringstream ss;
-	// the first two chars of move are the "from" coord
-	ss << "from=" << move[0] << move[1];
-	ss << "&";
-	ss << "to=" << move[2] << move[3];
-
-	std::string postData = ss.str();
-
-	CURL *curl = curl_easy_init();
-
-	if (curl) {
-		std::string readBuffer;
-		curl_easy_setopt(curl, CURLOPT_URL, s_SubmitMoveEndpoint.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, postData.size());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-
-		auto res = curl_easy_perform(curl);
-
-		long http_code = 200;
-		curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &http_code);
-		curl_easy_cleanup(curl);
-
-		if (http_code == 200)
-			return ErrorCode::OK;
-		if (http_code == 409)
-			return ErrorCode::IllegalMove;
-	}
-
-	curl_easy_cleanup(curl);
-	return ErrorCode::CurlError;
+StatusCode NetworkHandler::SendMove(const std::string& move) {
+	std::string postData = std::string("from=") + move[0] + move[1] + "&to=" + move[2] + move[3];
+	return Post(m_SubmitMoveEndpoint, postData);
 }
 
-int NetworkHandler::GetTimeSecondsLeft() {
-	using namespace std::chrono_literals;
-	CURL *curl = curl_easy_init();
-	std::string data = "player=1";
+Move NetworkHandler::GetMove() {
+	cURLpp::Easy request;
+	request.setOpt(new cURLpp::options::Url(m_GetMoveEndpoint));
+	request.setOpt(new cURLpp::options::Verbose(m_Verbose));
 
-	if (curl) {
-		std::string readBuffer;
-		curl_easy_setopt(curl, CURLOPT_URL, s_GetTimeLeftEndpoint.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str());
-		curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.size());
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+	std::stringstream resp;
+	request.setOpt(new curlpp::options::WriteStream(&resp));
 
-		// std::this_thread::sleep_for(1s);
-		auto res = curl_easy_perform(curl);
+	// attach the cookies to the request
+	request.setOpt(new cURLpp::options::CookieFile("")); // for some reason it breaks if removed
+	request.setOpt(new cURLpp::options::CookieSession(true));
+	for (const auto& cookie: m_CookieJar)
+		request.setOpt(new cURLpp::options::CookieList(cookie));
 
-		return stoi(readBuffer);
-	}
+	// do your thing
+	request.perform();
 
-	curl_easy_cleanup(curl);
-	return -1;
+	return Chess2Move(resp.str());
+}
+
+int NetworkHandler::GetTimeSecondsLeft(Player player) {
+	// initialize the request
+	cURLpp::Easy request;
+
+	std::string endpoint = m_GetTimeLeftEndpoint +
+			"?player=" + ( player == Player::White ? "w" : "b");
+
+	request.setOpt(new cURLpp::options::Url(endpoint));
+	request.setOpt(new cURLpp::options::Verbose(m_Verbose));
+
+	std::stringstream resp;
+	request.setOpt(new curlpp::options::WriteStream(&resp));
+
+	// do your thing
+	request.perform();
+
+	// extract the response code
+	auto statusCode = cURLpp::infos::ResponseCode::get(request);
+	if (statusCode != 200)
+		return -1;
+
+	// return the response
+	return std::stoi(resp.str());
+}
+
+StatusCode NetworkHandler::Int2Status(long status) {
+	if (status == 200)
+		return StatusCode::OK;
+	if (status == 409)
+		return StatusCode::IllegalMove;
+	if (status == 422)
+		return StatusCode::Unprocessable;
+	if (status == 408)
+		return StatusCode::OutOfTime;
+	if (status == 425)
+		return StatusCode::NotYourTurn;
+	if (status == 401)
+		return StatusCode::NotLoggedIn;
+	if (status == 423)
+		return StatusCode::GameFull;
+
+	return StatusCode::CurlError;
+}
+
+StatusCode NetworkHandler::Post(const std::string& endpoint, const std::string& data) {
+	// initialize the request
+	cURLpp::Easy request;
+	request.setOpt(new cURLpp::options::Url(endpoint));
+	request.setOpt(new cURLpp::options::Verbose(m_Verbose));
+
+	// set the headers
+	std::list<std::string> header;
+	header.emplace_back("Content-Type: application/x-www-form-urlencoded");
+	request.setOpt(new cURLpp::options::HttpHeader(header));
+
+	// add the post fields
+	request.setOpt(new cURLpp::options::PostFields(data));
+	request.setOpt(new curlpp::options::PostFieldSize(static_cast<long>(data.size())));
+
+	// throw out the response
+	std::stringstream garbage;
+	request.setOpt(new curlpp::options::WriteStream(&garbage));
+
+	// attach the cookies to the request
+	request.setOpt(new cURLpp::options::CookieFile("")); // for some reason it breaks if removed
+	request.setOpt(new cURLpp::options::CookieSession(true));
+	for (const auto& cookie: m_CookieJar)
+		request.setOpt(new cURLpp::options::CookieList(cookie));
+
+	// do your thing
+	request.perform();
+
+	// extract the cookies
+	cURLpp::infos::CookieList::get(request, m_CookieJar);
+
+	// extract the response code
+	auto statusCode = cURLpp::infos::ResponseCode::get(request);
+	return Int2Status(statusCode);
 }

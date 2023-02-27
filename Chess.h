@@ -62,17 +62,37 @@ static Coord Chess2Coord(const char* notation) {
 	return {file - 'a', row - '1'};
 }
 
-static Move Chess2Move(const char* notation) {
+static std::string Coord2Chess(const Coord& coord) {
+	std::string notation;
+	notation += (char)('a' + coord.first);
+	notation += (char)('1' + coord.second);
+	return notation;
+}
+
+static Move Chess2Move(const std::string& notation) {
 	/// accept input such as 	"b6b7" to move from b7 to b7
 	///							"b7b8R" to promote to rook after move
-	Coord from = Chess2Coord(notation);
-	Coord to = Chess2Coord(notation + 2);
+	Coord from = Chess2Coord(notation.c_str());
+	Coord to = Chess2Coord(notation.c_str() + 2);
 
 	// if there is a promotion included
-	if (strlen(notation) > 4)
+	if (notation.size() > 4)
 		return {from, to, notation[4]};
 
 	return {from, to, std::nullopt};
+}
+
+static std::string Move2Chess(const Move& move) {
+	std::string notation;
+	notation += (char)('a' + move.from.first);
+	notation += (char)('1' + move.from.second);
+	notation += (char)('a' + move.to.first);
+	notation += (char)('1' + move.to.second);
+
+	if (move.promote)
+		notation += move.promote.value();
+
+	return notation;
 }
 
 static std::ostream& operator<<(std::ostream& ostream, const Coord& coord){
@@ -101,7 +121,7 @@ public:
 
 	[[nodiscard]] std::string GetFen() const;
 	[[nodiscard]] const std::string& GetPGN() const { return m_PGN; }
-	[[nodiscard]] const int GetFullMoves() const {return m_fullMoves;}
+	[[nodiscard]] int GetFullMoves() const {return m_fullMoves;}
 	[[nodiscard]] inline Player GetCurrentPlayer() const { return m_Playing; }
 	[[nodiscard]] inline Player GetNotCurrentPlayer() const {
 		return m_Playing == Player::White ? Player::Black : Player::White;

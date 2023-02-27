@@ -3,53 +3,31 @@
 #include "NetworkHandler.h"
 
 int main() {
-	// NetworkHandler::Init("localhost:5000");
+	// NetworkHandler::Get().Init("localhost:5000");
+
+	// Chess c("rnbqkbnr/ppp1pppp/8/2P5/3p4/8/PP1PPPPP/RNBQKBNR w KQkq - 0 1");
+	// c.ApplyMove(Chess2Move("e2e4"));
+	// std::cout << c << std::endl;
+	// c.ApplyMove(Chess2Move("d4e3"));
+	// std::cout << c << std::endl;
 	//
-	// ErrorCode code = NetworkHandler::SendMove("e2e4");
-	// if (code == ErrorCode::IllegalMove)
-	// 	std::cout << "Illegal move" << std::endl;
-	// else if (code == ErrorCode::CurlError)
-	// 	std::cout << "Error when calling curl" << std::endl;
-	// else
-	// 	std::cout << "Moved the piece" << std::endl;
-	//
-	// std::cout << NetworkHandler::GetTimeSecondsLeft() << std::endl;
+	// c.ApplyMove(Chess2Move("h2h4"));
+	// std::cout << c << std::endl;
+	// c.ApplyMove(Chess2Move("b7b5"));
+	// std::cout << c << std::endl;
+	// c.ApplyMove(Chess2Move("c5b6"));
+	// std::cout << c << std::endl;
 
 	srand(time(nullptr));
 
-	// Chess c("7k/8/Bp2r2K/8/1p1pn3/8/3r3P/3r4 w - - 0 1");
-	// std::cout << c << std::endl;
-	//
-	// for (const Move& m : c.GetLegalMoves()) {
-	// 	std::cout << m << std::endl;
-	// }
-	//
-	// std::cout << c.GetLegalMoves().size() << std::endl;
-	//
-	// std::string line;
-	// std::cin >> line;
-	//
-	// c.ApplyMove(Chess2Move(line.c_str()));
-	int shortestGame = -1;
-
-	for (int g = 0; g < 10000; g++) {
+	for (int games = 0; games < 100; games++) {
 		Chess c;
 
-		for (int i = 0; i < 400; i++) {
+		for (int i = 0; i < 200; i++) {
 			auto moves = c.GetLegalMoves();
 
-			if (moves.empty()) {
-				if (c.GetFullMoves() < shortestGame || shortestGame == -1)
-					shortestGame = c.GetFullMoves();
-
-				std::cout << c << std::endl;
-				std::cout << c.GetPGN() << std::endl;
+			if (moves.empty())
 				break;
-			}
-
-			if (c.GetFullMoves() > shortestGame && shortestGame != -1)
-				break;
-
 
 			int randMoveIndex = rand() % moves.size();
 
@@ -64,6 +42,7 @@ int main() {
 
 			c.ApplyMove(chosen);
 		}
+		std::cout << c.GetPGN() << std::endl;
 	}
 
 	return 0;
