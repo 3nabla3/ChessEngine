@@ -9,7 +9,7 @@ int main() {
 	Player player = Player::White;
 	Chess c;
 
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 200; i++) {
 		std::cout << c << std::endl;
 		if (c.GetCurrentPlayer() == player) {
 			Move move = c.GetRandomLegalMove();
@@ -20,7 +20,13 @@ int main() {
 			Move move = NetworkHandler::Get().GetMove();
 			c.ApplyMove(move);
 		}
+		if (c.GetLegalMoves().empty()) {
+			std::cout << "Game over" << std::endl;
+			break;
+		}
 	}
+
+	std::cout << c.GetPGN() << std::endl;
 
 	return 0;
 }

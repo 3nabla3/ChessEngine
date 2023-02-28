@@ -509,6 +509,7 @@ CastlingRights Chess::ParseCastlingRightsFromFen(const std::string& fen, Player 
 Chess& Chess::ApplyMove(const Move& move) {
 	if (!IsMoveLegal(move)) {
 		std::cout << "Move is not legal!" << std::endl;
+		std::cout << move << std::endl;
 		exit(1);
 	}
 
