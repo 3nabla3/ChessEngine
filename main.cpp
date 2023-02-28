@@ -14,13 +14,14 @@ int main() {
 		if (c.GetCurrentPlayer() == player) {
 			Move move = c.GetRandomLegalMove();
 			c.ApplyMove(move);
-			std::cout << "Sending" << move << std::endl;
-			NetworkHandler::Get().SendMove(move);
+			std::cout << "Sending " << move << std::endl;
+			StatusCode sc = NetworkHandler::Get().SendMove(move);
+			std::cout << "Status: " << sc << std::endl;
 		}
 		else {
 			Move move = NetworkHandler::Get().GetMove();
+			std::cout << "Received " << move << std::endl;
 			c.ApplyMove(move);
-			std::cout << "Received" << move << std::endl;
 		}
 		if (c.GetLegalMoves().empty()) {
 			std::cout << "Game over" << std::endl;
