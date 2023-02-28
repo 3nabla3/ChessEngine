@@ -140,6 +140,8 @@ public:
 	Chess& ApplyMove(const Coord& from, const Coord& to) { return ApplyMove({from, to, std::nullopt}); }
 	Chess& ApplyMove(const std::string& notation) { return ApplyMove(Chess2Move(notation)); }
 
+	Move GetRandomLegalMove() const;
+
 	static Board BoardFromFen(const std::string& fen);
 	friend std::ostream& operator<<(std::ostream& ostream, const Chess& chess);
 private:

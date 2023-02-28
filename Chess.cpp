@@ -6,7 +6,7 @@ Chess::Chess(const std::string& fen)
 	m_EnPassant(ParseEnPassantFromFen(fen)),
 	m_WhiteCastlingRights(ParseCastlingRightsFromFen(fen, Player::White)),
 	m_BlackCastlingRights(ParseCastlingRightsFromFen(fen, Player::Black))
-	{}
+{}
 
 std::ostream& operator<<(std::ostream& ostream, const Chess& chess) {
 	ostream << chess.GetFen() << std::endl;
@@ -286,6 +286,22 @@ std::list<Move> Chess::GetPseudoLegalMovesKing(int col, int row) const {
 			}
 		}
 
+	// check castling
+	if (GetCurrentPlayer() == Player::White) {
+		// check white king side castling
+		if (m_WhiteCastlingRights.first and GetPiece(5, 0) == ' ' and GetPiece(6, 0) == ' ')
+			moves.emplace_back(Coord({col, row}), Coord({6, 0}));
+		// check white queen side castling
+		if (m_WhiteCastlingRights.second and GetPiece(1, 0) == ' ' and GetPiece(2, 0) == ' ' and GetPiece(3, 0) == ' ')
+			moves.emplace_back(Coord({col, row}), Coord({2, 0}));
+	} else {
+		// check black king side castling
+		if (m_BlackCastlingRights.first and GetPiece(5, 7) == ' ' and GetPiece(6, 7) == ' ')
+			moves.emplace_back(Coord({col, row}), Coord({6, 7}));
+		// check black queen side castling
+		if (m_BlackCastlingRights.second and GetPiece(1, 7) == ' ' and GetPiece(2, 7) == ' ' and GetPiece(3, 7) == ' ')
+			moves.emplace_back(Coord({col, row}), Coord({2, 7}));
+	}
 	return moves;
 }
 
@@ -502,14 +518,6 @@ Chess& Chess::ApplyMove(const Move& move) {
 	char& pieceToMove = GetPieceRef(from.first, from.second);
 	char& pieceToReplace = GetPieceRef(to.first, to.second);
 
-
-
-	// if there is a promotion, replace the piece
-	if (move.promote)
-		pieceToReplace = move.promote.value();
-	else
-		pieceToReplace = pieceToMove;
-
 	// if the move played was en passant, remove the correct piece
 	if (to == m_EnPassant) {
 		if (pieceToMove == 'p')
@@ -530,13 +538,53 @@ Chess& Chess::ApplyMove(const Move& move) {
 	} else {
 		m_EnPassant = {};
 	}
-	pieceToMove = ' ';
 
 	// check if a pawn was moved or if a piece was taken
 	if (pieceToMove == 'p' or pieceToMove == 'P' or pieceToReplace != ' ')
 		m_halfMovesRule = 0;
 	else
 		m_halfMovesRule++;
+
+	// if there is a promotion, replace the piece with the correct one
+	if (move.promote)
+		pieceToReplace = move.promote.value();
+	else
+		pieceToReplace = pieceToMove;
+
+	// if the move is a castling, move the rook too
+	if (pieceToMove == 'K' and from == Coord({4, 0}) and to == Coord({6, 0})) {
+		GetPieceRef(7, 0) = ' ';
+		GetPieceRef(5, 0) = 'R';
+	} else if (pieceToMove == 'K' and from == Coord({4, 0}) and to == Coord({2, 0})) {
+		GetPieceRef(0, 0) = ' ';
+		GetPieceRef(3, 0) = 'R';
+	} else if (pieceToMove == 'k' and from == Coord({4, 7}) and to == Coord({6, 7})) {
+		GetPieceRef(7, 7) = ' ';
+		GetPieceRef(5, 7) = 'r';
+	} else if (pieceToMove == 'k' and from == Coord({4, 7}) and to == Coord({2, 7})) {
+		GetPieceRef(0, 7) = ' ';
+		GetPieceRef(3, 7) = 'r';
+	}
+
+	// the king or the rooks move, castling is not allowed
+	if (pieceToMove == 'K')
+		m_WhiteCastlingRights = {false, false};
+	else if (pieceToMove == 'k')
+		m_BlackCastlingRights = {false, false};
+	else if (pieceToMove == 'R') {
+		if (from == Coord({0, 0}))
+			m_WhiteCastlingRights.second = false;
+		else if (from == Coord({7, 0}))
+			m_WhiteCastlingRights.first = false;
+	} else if (pieceToMove == 'r') {
+		if (from == Coord({0, 7}))
+			m_BlackCastlingRights.second = false;
+		else if (from == Coord({7, 7}))
+			m_BlackCastlingRights.first = false;
+	}
+
+	// remove the piece from its staring square
+	pieceToMove = ' ';
 
 	std::stringstream ss;
 
@@ -564,4 +612,23 @@ bool Chess::IsMoveLegal(const Move& move) const {
 	return std::ranges::any_of(GetLegalMoves(), [move](const Move& legalMove) {
 		return legalMove == move;
 	});
+}
+
+template<typename Iter, typename RandomGenerator>
+static Iter select_randomly(Iter start, Iter end, RandomGenerator& g) {
+	std::uniform_int_distribution<> dis(0, std::distance(start, end) - 1);
+	std::advance(start, dis(g));
+	return start;
+}
+
+template<typename Iter>
+static Iter select_randomly(Iter start, Iter end) {
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+	return select_randomly(start, end, gen);
+}
+
+Move Chess::GetRandomLegalMove() const {
+	const auto& moves = GetLegalMoves();
+	return *select_randomly(moves.begin(), moves.end());
 }

@@ -7,3 +7,5 @@
 #include <optional>
 #include <sstream>
 #include <cstring>
+#include <random>
+#include <iterator>

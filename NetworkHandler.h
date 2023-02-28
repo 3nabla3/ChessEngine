@@ -39,6 +39,7 @@ public:
 	StatusCode Login(const std::string& username);
 
 	StatusCode SendMove(const std::string& move);
+	StatusCode SendMove(const Move& move) { return SendMove(Move2Chess(move)); }
 	Move GetMove();
 
 private:
