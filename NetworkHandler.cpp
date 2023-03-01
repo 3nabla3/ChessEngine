@@ -21,6 +21,8 @@ StatusCode NetworkHandler::Login(const std::string& username) {
 
 StatusCode NetworkHandler::SendMove(const std::string& move) {
 	std::string postData = std::string("from=") + move[0] + move[1] + "&to=" + move[2] + move[3];
+	if (move.length() == 5)
+		postData = postData + "&promote=" + move[4];
 	return Post(m_SubmitMoveEndpoint, postData);
 }
 

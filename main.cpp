@@ -17,6 +17,8 @@ int main() {
 			std::cout << "Sending " << move << std::endl;
 			StatusCode sc = NetworkHandler::Get().SendMove(move);
 			std::cout << "Status: " << sc << std::endl;
+			if (sc != StatusCode::OK)
+				break;
 		}
 		else {
 			Move move = NetworkHandler::Get().GetMove();

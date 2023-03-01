@@ -527,15 +527,16 @@ Chess& Chess::ApplyMove(const Move& move) {
 			GetPieceRef(to.first, to.second - 1) = ' ';
 	}
 
-	// if a pawn is moving and it allows en passant
-	if (pieceToMove == 'p' and from.second == 6 and to.second == 4) {
-		if (to.first - 1 >= 0 and GetPiece(to.first - 1, 4) == 'P' ||
-		    to.first + 1 <= 7 and GetPiece(to.first + 1, 4) == 'P')
-			m_EnPassant = Coord({to.first, 5});
-	} else if (pieceToMove == 'P' and from.second == 1 and to.second == 3) {
+	// if a white pawn moved two ranks
+	if (pieceToMove == 'P' and from.second == 1 and to.second == 3) {
+		// if there are black pawns on the side
 		if (to.first - 1 >= 0 and GetPiece(to.first - 1, 3) == 'p' ||
-		    to.first + 1 <= 7 and GetPiece(to.first + 1, 3) == 'p')
+			to.first + 1 <= 7 and GetPiece(to.first + 1, 3) == 'p')
 			m_EnPassant = Coord({to.first, 2});
+	} else if (pieceToMove == 'p' and from.second == 6 and to.second == 4) {
+		if (to.first - 1 >= 0 and GetPiece(to.first - 1, 4) == 'P' ||
+			to.first + 1 <= 7 and GetPiece(to.first + 1, 4) == 'P')
+			m_EnPassant = Coord({to.first, 5});
 	} else {
 		m_EnPassant = {};
 	}
