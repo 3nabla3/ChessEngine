@@ -3,10 +3,10 @@
 #include "NetworkHandler.h"
 
 int main() {
-	NetworkHandler::Get().Init("localhost:5000");
+	NetworkHandler::Get().Init("172.20.10.2:5000");
 	NetworkHandler::Get().Login("Alban");
 
-	Player player = Player::White;
+	Player player = Player::Black;
 	Chess c;
 
 	for (int i = 0; i < 200; i++) {
