@@ -14,12 +14,13 @@ void NetworkHandler::Init(const std::string& socket) {
 	m_GetMoveEndpoint = prefix + "/getmove";
 }
 
-StatusCode NetworkHandler::Login(const std::string& username) {
+LoginResponse NetworkHandler::Login(const std::string& username) {
 	std::string postData("user=" + username);
-	return Post(m_LoginEndpoint, postData);
+	HttpResponse resp = Post(m_LoginEndpoint, postData);
+	return {resp.response == "white" ? Player::White : Player::Black , resp.statusCode};
 }
 
-StatusCode NetworkHandler::SendMove(const std::string& move) {
+HttpResponse NetworkHandler::SendMove(const std::string& move) {
 	std::string postData = std::string("from=") + move[0] + move[1] + "&to=" + move[2] + move[3];
 	if (move.length() == 5)
 		postData = postData + "&promote=" + move[4];
@@ -90,7 +91,7 @@ StatusCode NetworkHandler::Int2Status(long status) {
 	return StatusCode::CurlError;
 }
 
-StatusCode NetworkHandler::Post(const std::string& endpoint, const std::string& data) {
+HttpResponse NetworkHandler::Post(const std::string& endpoint, const std::string& data) {
 	// initialize the request
 	cURLpp::Easy request;
 	request.setOpt(new cURLpp::options::Url(endpoint));
@@ -106,8 +107,8 @@ StatusCode NetworkHandler::Post(const std::string& endpoint, const std::string& 
 	request.setOpt(new curlpp::options::PostFieldSize(static_cast<long>(data.size())));
 
 	// throw out the response
-	std::stringstream garbage;
-	request.setOpt(new curlpp::options::WriteStream(&garbage));
+	std::stringstream playerColor;
+	request.setOpt(new curlpp::options::WriteStream(&playerColor));
 
 	// attach the cookies to the request
 	request.setOpt(new cURLpp::options::CookieFile("")); // for some reason it breaks if removed
@@ -123,5 +124,5 @@ StatusCode NetworkHandler::Post(const std::string& endpoint, const std::string& 
 
 	// extract the response code
 	auto statusCode = cURLpp::infos::ResponseCode::get(request);
-	return Int2Status(statusCode);
+	return {playerColor.str(), Int2Status(statusCode)};
 }

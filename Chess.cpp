@@ -88,16 +88,47 @@ Board Chess::BoardFromFen(const std::string& fen) {
 	return board;
 }
 
+bool Chess::IsCastlingLegal(bool kingSide) const {
+	if (m_Board.IsCheck(GetCurrentPlayer()))
+		return false;
+
+	// make sure the king doesn't castle through check
+	Board copy = m_Board;
+	if (kingSide) {
+		copy.ApplyMove("e1f1");
+		if (copy.IsCheck(GetCurrentPlayer()))
+			return false;
+	}
+	else {
+		copy.ApplyMove("e1d1");
+		if (copy.IsCheck(GetCurrentPlayer()))
+			return false;
+	}
+	return true;
+}
+
+// Check all the pseudo legal moves and remove the ones that violate the check rules
 const std::list<Move>& Chess::GetLegalMoves() const {
 	// if this was already calculated
 	if (!m_LegalMovesCache.empty())
 		return m_LegalMovesCache;
 
-	const CastlingRights& castlingRights = GetCurrentPlayer() == Player::White ? m_WhiteCastlingRights : m_BlackCastlingRights;
+	const CastlingRights& castlingRights =
+			GetCurrentPlayer() == Player::White ? m_WhiteCastlingRights : m_BlackCastlingRights;
 	m_LegalMovesCache = m_Board.GetPseudoLegalMoves(GetCurrentPlayer(), m_EnPassant, castlingRights);
 
 	auto it = m_LegalMovesCache.begin();
 	while (it != m_LegalMovesCache.end()) {
+		// if the move is a castling move, check if it's legal
+		char piece = m_Board.GetPiece(it->from);
+
+		if ((piece == 'K' or piece == 'k') and std::abs(it->from.first - it->to.first) > 1) {
+			if (!IsCastlingLegal(it->to.first == 6)) {
+				it = m_LegalMovesCache.erase(it); // catch the new iterator
+				continue;
+			}
+		}
+
 		Board copy = m_Board;
 		copy.ApplyMove(*it);
 
@@ -106,20 +137,10 @@ const std::list<Move>& Chess::GetLegalMoves() const {
 			it = m_LegalMovesCache.erase(it); // catch the new iterator
 		else
 			it++;
-
-		// TODO: check for castling through cemplace_backheck
-		// // if the move is castling and the king is in check, remove it
-		// if (fromPiece == 'K' and std::abs(it->from.first - it->to.first) == 2)
-		// 	if (IsCheck())
-		// 		it = m_LegalMovesCache.erase(it); // catch the new iterator
 	}
 
 	return m_LegalMovesCache;
 }
-
-// bool Chess::IsCurrentPlayerPiece(char piece) const {
-// 	return IsPlayerPiece(piece, GetCurrentPlayer());
-// }
 
 std::optional<Coord> Chess::ParseEnPassantFromFen(const std::string& fen) {
 	// if we split the fen by spaces, what index is the EP info
@@ -205,22 +226,7 @@ Chess& Chess::ApplyMove(const Move& move) {
 		m_EnPassant = {};
 	}
 
-	// the king or the rooks move, castling is not allowed anymore
-	if (pieceToMove == 'K')
-		m_WhiteCastlingRights = {false, false};
-	else if (pieceToMove == 'k')
-		m_BlackCastlingRights = {false, false};
-	else if (pieceToMove == 'R') {
-		if (from == Coord({0, 0}))
-			m_WhiteCastlingRights.second = false;
-		else if (from == Coord({7, 0}))
-			m_WhiteCastlingRights.first = false;
-	} else if (pieceToMove == 'r') {
-		if (from == Coord({0, 7}))
-			m_BlackCastlingRights.second = false;
-		else if (from == Coord({7, 7}))
-			m_BlackCastlingRights.first = false;
-	}
+	UpdateCastlingRights(move);
 
 	m_Board.ApplyMove(move);
 	m_LegalMovesCache.clear();
@@ -241,6 +247,42 @@ Chess& Chess::ApplyMove(const Move& move) {
 	m_Playing = GetNotCurrentPlayer();
 
 	return *this;
+}
+
+void Chess::UpdateCastlingRights(const Move& move) {
+	const auto& from = move.from;
+	const auto& to = move.to;
+	char& pieceToMove = m_Board.GetPieceRef(from);
+	char& pieceToReplace = m_Board.GetPieceRef(to);
+
+	// the king or the rooks move, castling is not allowed anymore
+	if (pieceToMove == 'K')
+		m_WhiteCastlingRights = {false, false};
+	else if (pieceToMove == 'k')
+		m_BlackCastlingRights = {false, false};
+	else if (pieceToMove == 'R') {
+		if (from == Coord({0, 0}))
+			m_WhiteCastlingRights.second = false;
+		else if (from == Coord({7, 0}))
+			m_WhiteCastlingRights.first = false;
+	} else if (pieceToMove == 'r') {
+		if (from == Coord({0, 7}))
+			m_BlackCastlingRights.second = false;
+		else if (from == Coord({7, 7}))
+			m_BlackCastlingRights.first = false;
+	}
+		// if a rook is taken, castling is not allowed anymore
+	else if (pieceToReplace == 'R') {
+		if (to == Coord({0, 0}))
+			m_WhiteCastlingRights.second = false;
+		else if (to == Coord({7, 0}))
+			m_WhiteCastlingRights.first = false;
+	} else if (pieceToReplace == 'r') {
+		if (to == Coord({0, 7}))
+			m_BlackCastlingRights.second = false;
+		else if (to == Coord({7, 7}))
+			m_BlackCastlingRights.first = false;
+	}
 }
 
 bool Chess::IsMoveLegal(const Move& move) const {

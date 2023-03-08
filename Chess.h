@@ -4,8 +4,6 @@
 
 class Chess {
 public:
-	constexpr static int SIZE = 8;
-
 	explicit Chess(const std::string& fen
 		= std::string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
 
@@ -34,6 +32,8 @@ private:
 	[[nodiscard]] static std::optional<Coord> ParseEnPassantFromFen(const std::string& fen);
 	[[nodiscard]] static CastlingRights ParseCastlingRightsFromFen(const std::string& fen, Player player);
 
+	void UpdateCastlingRights(const Move& move);
+	bool IsCastlingLegal(bool kingSide) const;
 
 	std::optional<Coord> m_EnPassant;
 

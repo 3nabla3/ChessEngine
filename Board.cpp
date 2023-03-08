@@ -3,7 +3,7 @@
 
 
 std::ostream& operator<<(std::ostream& ostream, const Board& board) {
-	int rowCount = 8;
+	int rowCount = Board::SIZE;
 	ostream << rowCount-- << " | ";
 
 	for (int i = 0; i < board.size(); i++) {
@@ -23,6 +23,7 @@ std::ostream& operator<<(std::ostream& ostream, const Board& board) {
 	return ostream;
 }
 
+// assume the move is legal when calling this function
 void Board::ApplyMove(const Move& move) {
 	const auto& from = move.from;
 	const auto& to = move.to;
@@ -62,6 +63,7 @@ void Board::ApplyMove(const Move& move) {
 	pieceToMove = ' ';
 }
 
+// generate all the legal moves for the current player regardless of the king being in check
 std::list<Move> Board::GetPseudoLegalMoves(Player player, std::optional<Coord> enPassant, const CastlingRights& castlingRights) const {
 	std::list<Move> legalMoves;
 	for (int col = 0; col < SIZE; col++)

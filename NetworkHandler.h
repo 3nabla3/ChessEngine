@@ -26,6 +26,16 @@ static std::ostream &operator<<(std::ostream &os, const StatusCode &status) {
 	return os;
 }
 
+typedef struct {
+	std::string response;
+	StatusCode statusCode;
+} HttpResponse;
+
+typedef struct {
+	Player player;
+	StatusCode statusCode;
+} LoginResponse;
+
 class NetworkHandler {
 public:
 	static NetworkHandler& Get() {
@@ -36,14 +46,14 @@ public:
 
 	void Init(const std::string& socket);
 	int GetTimeSecondsLeft(Player player);
-	StatusCode Login(const std::string& username);
+	LoginResponse Login(const std::string& username);
 
-	StatusCode SendMove(const std::string& move);
-	StatusCode SendMove(const Move& move) { return SendMove(Move2Chess(move)); }
+	HttpResponse SendMove(const std::string& move);
+	HttpResponse SendMove(const Move& move) { return SendMove(Move2Chess(move)); }
 	Move GetMove();
 
 private:
-	StatusCode Post(const std::string& endpoint, const std::string& data);
+	HttpResponse Post(const std::string& endpoint, const std::string& data);
 	static StatusCode Int2Status(long status);
 
 	std::string m_SubmitMoveEndpoint;
