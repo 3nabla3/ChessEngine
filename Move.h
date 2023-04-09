@@ -20,7 +20,9 @@ typedef struct Move {
 	Coord from;
 	Coord to;
 	std::optional<char> promote;
+
 } Move;
+
 
 static Coord Chess2Coord(const char* notation) {
 	char file = notation[0];
@@ -71,7 +73,7 @@ static std::ostream& operator<<(std::ostream& ostream, const Coord& coord){
 }
 
 static std::ostream& operator<<(std::ostream& ostream, const Move& move) {
-	ostream << move.from << " -> " << move.to;
+	ostream << move.from << move.to;
 	if (move.promote)
 		ostream << "=" << move.promote.value();
 
