@@ -1,7 +1,5 @@
-
 #include "Chess.h"
-
-typedef float Score;
+#include "StaticEvaluator.h"
 
 struct TreeNode {
 	Move delta;
@@ -41,10 +39,6 @@ public:
 	void ApplyMove(const Move& move);
 	void ApplyThinkingPolicy();
 
-
-	[[nodiscard]] static Score StaticEvaluation(const Board& board);
-	[[nodiscard]] static Score DefaultStaticEvaluation(const Board& board);
-
 	[[nodiscard]] MoveReturnData GetBestMove();
 
 	static std::vector<Move> GetLine(TreeNode* node);
@@ -77,13 +71,9 @@ private:
 	std::queue<TreeNode*> m_Queue;
 	std::atomic_bool m_Thinking = true;
 
-	const int m_BatchDepth = 12;
+	const int m_BatchDepth = 6;
 	int m_msThinkTime = 1000;
 	std::unique_ptr<TreeNode> m_Tree = nullptr;
 
 	mutable std::array<int, n_Threads> m_NodesPerThread = {0};
-
-	static std::unordered_map<std::string, Score> m_Evaluations;
-	constexpr static Score LOSS = -1000;
-	constexpr static Score WIN =   1000;
 };

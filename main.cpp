@@ -13,13 +13,17 @@ int main() {
 	// std::cout << "Playing as " << playing << std::endl;
 	// Player playing = Player::White;
 
-	Chess c("8/p4K2/P7/8/8/8/1k6/8 w - - 0 1");
+	Chess c;
 	Engine mm(c);
 
-	std::cout << "Thinking..." << std::endl;
-	auto [move, score, mate_in] = mm.GetBestMove();
-	mm.ApplyMove(move);
-	std::cout << "Sending " << move << "[ " << score << " ]" << std::endl;
+	{
+		std::cout << "Thinking..." << std::endl;
+		PROFILE_SCOPE;
+		auto [move, score, mate_in] = mm.GetBestMove();
+		std::cout << "Sending " << move << "[ " << score << " ]" << std::endl;
+	}
+
+	Timer::PrintDurations();
 
 	// while (not c.IsGameOver()) {
 	// 	std::cout << c.GetBoard().GetFen() << std::endl;

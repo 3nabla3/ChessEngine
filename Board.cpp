@@ -120,7 +120,7 @@ const std::vector<Move>& Board::GetLegalMoves() const {
 		// if the move is a castling move, check if it's legal
 		char piece = GetPiece(it->from);
 		if ((piece == 'K' or piece == 'k') and std::abs(it->from.first - it->to.first) > 1) {
-			if (!IsCastlingLegal(it->to.first == 6)) {
+			if (not IsCastlingLegal(it->to.first == 6)) {
 				it = moves.erase(it); // catch the new iterator
 				continue;
 			}
@@ -151,7 +151,7 @@ std::vector<Move> Board::GetPseudoLegalMoves() const {
 		for (int row = 0; row < SIZE; row++) {
 			char piece = GetPiece(col, row);
 
-			if (!IsPlayerPiece(piece, GetCurrentPlayer())) continue;
+			if (not IsPlayerPiece(piece, GetCurrentPlayer())) continue;
 
 			const auto& moves = GetLegalMovesForPiece(col, row);
 			legalMoves.insert(legalMoves.end(), moves.begin(), moves.end());
@@ -260,7 +260,7 @@ std::vector<Move> Board::GetPseudoLegalMovesKnight(int col, int row) const {
 			int x = col + xd;
 			int y = row + yd;
 			if (0 <= x and x <= 7 and 0 <= y and y <= 7)
-				if (!IsPlayerPiece(GetPiece(x, y), GetCurrentPlayer()))
+				if (not IsPlayerPiece(GetPiece(x, y), GetCurrentPlayer()))
 					moves.emplace_back(Coord({col, row}), Coord({x, y}));
 		}
 
@@ -271,7 +271,7 @@ std::vector<Move> Board::GetPseudoLegalMovesKnight(int col, int row) const {
 			int y = row + yd;
 			// if the position is in bounds
 			if (0 <= x and x <= 7 and 0 <= y and y <= 7)
-				if (!IsPlayerPiece(GetPiece(x, y), GetCurrentPlayer()))
+				if (not IsPlayerPiece(GetPiece(x, y), GetCurrentPlayer()))
 					moves.emplace_back(Coord({col, row}), Coord({x, y}));
 		}
 
@@ -352,7 +352,7 @@ std::vector<Move> Board::GetPseudoLegalMovesKing(int col, int row) const {
 			int y = row + dy;
 			// if the position is in bounds
 			if (0 <= x and x < 8 and 0 <= y and y < 8) {
-				if (!IsPlayerPiece(GetPiece(col + dx, row + dy), GetCurrentPlayer()))
+				if (not IsPlayerPiece(GetPiece(col + dx, row + dy), GetCurrentPlayer()))
 					moves.emplace_back(Coord({col, row}), Coord({x, y}));
 			}
 		}
@@ -422,7 +422,7 @@ std::vector<Move> Board::GetPseudoLegalMovesPawn(int col, int row) const {
 		int y = row + dy;
 		piece = GetPiece(x, y);
 		// pawns can only move diag if they are taking a piece
-		if (!IsPlayerPiece(piece, GetCurrentPlayer()) and piece != ' ') {
+		if (not IsPlayerPiece(piece, GetCurrentPlayer()) and piece != ' ') {
 			// if white can promote
 			if (row + dy == 7)
 				for (char promote : std::string("QRBN"))
@@ -454,7 +454,7 @@ bool Board::IsCheckmate() const {
 bool Board::IsDraw() const {
 	if (m_halfMovesRule >= 100)
 		return true;
-	if (GetLegalMoves().empty() and !IsCheck())
+	if (GetLegalMoves().empty() and not IsCheck())
 		return true;
 	return false;
 }
@@ -513,7 +513,7 @@ bool Board::IsCheck() const {
 
 	// if the king is on the 2nd or 7th rank, it can't be checked by a pawn
 	if (IsWhiteTurn() and kingRow > 5 or
-		!IsWhiteTurn() and kingRow < 2)
+		not IsWhiteTurn() and kingRow < 2)
 		return false;
 
 	char otherPawn = IsWhiteTurn() ? 'p' : 'P';
@@ -642,7 +642,7 @@ bool Board::IsCastlingLegal(bool kingSide) const {
 	}
 
 	copy.m_Playing = GetCurrentPlayer();
-	return !copy.IsCheck();
+	return not copy.IsCheck();
 }
 
 RawBoard Board::BoardFromFen(const std::string& fen) {

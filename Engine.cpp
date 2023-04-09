@@ -16,7 +16,7 @@ void Engine::ApplyMove(const Move& move) {
 void Engine::LoadingBar(const std::stop_token& st, const Score* score) {
 	using namespace std::chrono_literals;
 	int i = 0;
-	while (!st.stop_requested()) {
+	while (not st.stop_requested()) {
 		std::cout << "\r" << "[" << std::string(i, '.') <<
 				  std::string(10 - i, ' ') << "]" << " Score: " << *score << "        " << std::flush;
 		i = (i + 1) % 10;
@@ -59,7 +59,7 @@ void Engine::ExpandNode(TreeNode* node, int depth, int threadId) {
 
 	// if the game is over, don't expand the node
 	if (board.IsGameOver()) {
-		node->score = StaticEvaluation(board);
+		node->score = StaticEvaluator::Evaluate(board);
 		return;
 	}
 
@@ -75,9 +75,9 @@ void Engine::ThreadWorker(int threadId) {
 		{
 			std::unique_lock lock(m_QueueMutex);
 			// condition must be true to continue
-			m_QueueCondition.wait(lock, [this] { return !m_Queue.empty() or !m_Thinking; });
+			m_QueueCondition.wait(lock, [this] { return not m_Queue.empty() or not m_Thinking; });
 
-			if (!m_Thinking){
+			if (not m_Thinking){
 				return;
 			}
 
@@ -171,7 +171,7 @@ MoveReturnData Engine::GetBestMove() {
 		std::jthread thread(Engine::LoadingBar, &m_Tree->score);
 
 		PROFILE_SCOPE_NAME("EvaluateNode");
-		Engine::EvaluateNode(m_Tree.get(), LOSS, WIN, m_BatchDepth);
+		Engine::EvaluateNode(m_Tree.get(), StaticEvaluator::LOSS, StaticEvaluator::WIN, m_BatchDepth);
 	}
 
 	int totalNodes = std::accumulate(m_NodesPerThread.begin(), m_NodesPerThread.end(), 0);
@@ -189,10 +189,10 @@ MoveReturnData Engine::GetBestMove() {
 			if (std::find(bestChildren.begin(), bestChildren.end(), child.get()) != bestChildren.end())
 				continue;
 
-			if (!bestChild or child->score < bestChild->score)
+			if (not bestChild or child->score < bestChild->score)
 				bestChild = child.get();
 		}
-		if (!bestChild)
+		if (not bestChild)
 			break;
 		i = bestChild;
 
@@ -219,18 +219,18 @@ Score Engine::EvaluateNode(TreeNode* node, Score alpha, Score beta, int depth) c
 
 	// if the node is a leaf, return the static evaluation
 	if (depth == 0 or board.GetLegalMoves().empty()) {
-		node->score = StaticEvaluation(board);
-		if (node->score == LOSS)
+		node->score = StaticEvaluator::Evaluate(board);
+		if (node->score == StaticEvaluator::LOSS)
 			node->mate_in = 0;
 		return node->score;
 	}
 
 	node->bestChild = nullptr;
 
-	node->score = LOSS; // worst case scenario is that the child is a mate against us
+	node->score = StaticEvaluator::LOSS; // worst case scenario is that the child is a mate against us
 	for (const auto& move : board.GetLegalMoves()) {
 		// create a new node for the child
-		node->children.push_back(std::make_unique<TreeNode>(move, !node->whiteTurn, node));
+		node->children.push_back(std::make_unique<TreeNode>(move, not node->whiteTurn, node));
 		TreeNode* child = node->children.back().get();
 
 		// evaluate the child from the perspective of the current node
@@ -249,51 +249,13 @@ Score Engine::EvaluateNode(TreeNode* node, Score alpha, Score beta, int depth) c
 		node->mate_in = node->bestChild->mate_in.value() + 1;
 		// if the mate in value is even, it's a mate against us
 		if (node->mate_in.value() % 2 == 0)
-			node->score = LOSS + (Score)node->mate_in.value();
+			node->score = StaticEvaluator::LOSS + (Score)node->mate_in.value();
 		else
-			node->score = WIN - (Score)node->mate_in.value();
+			node->score = StaticEvaluator::WIN - (Score)node->mate_in.value();
 	}
 	else
 		node->mate_in = std::nullopt;
 	return node->score;
-}
-
-// the static eval is from the perspective of the current player
-Score Engine::StaticEvaluation(const Board& board) {
-	PROFILE_SCOPE;
-	if (board.GetLegalMoves().empty()) {
-		// checkmate
-		if (board.IsCheck())
-			return LOSS;
-		// stalemate
-		else
-			return 0.f;
-	}
-
-	return DefaultStaticEvaluation(board);
-}
-
-// always returns a score from the perspective of the current player
-Score Engine::DefaultStaticEvaluation(const Board& board) {
-	Score score = 0;
-	for (int i = 0; i < Board::SIZE * Board::SIZE; i++) {
-		switch (board[i]) {
-		case 'Q': score += 9; break;
-		case 'R': score += 5; break;
-		case 'B':
-		case 'N': score += 3; break;
-		case 'P': score += 1; break;
-
-		case 'q': score -= 9; break;
-		case 'r': score -= 5; break;
-		case 'b':
-		case 'n': score -= 3; break;
-		case 'p': score -= 1; break;
-		}
-	}
-	// flip the score if we need to, to ensure that the score is from the perspective of the current player
-	// a positive score means that the current player is winning
-	return score * (board.IsWhiteTurn() ? 1.f : -1.f);
 }
 
 int Engine::Randint(int a, int b) {
@@ -312,13 +274,13 @@ std::string Engine::ScoreLabel(Score score, std::optional<int> mate_in, bool whi
 	if (mate_in) {
 		// if white will win
 		if (score > 0 and whiteTurn or
-								   score < 0 and !whiteTurn) {
+								   score < 0 and not whiteTurn) {
 			ss << "# " << mate_in.value() + 1;
 			return ss.str();
 		}
 		// if black will win
 		if (score < 0 and whiteTurn or
-									score > 0 and !whiteTurn) {
+									score > 0 and not whiteTurn) {
 			ss << "#-" << mate_in.value() + 1;
 			return ss.str();
 		}

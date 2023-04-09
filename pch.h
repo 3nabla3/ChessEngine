@@ -20,5 +20,5 @@
 #include <shared_mutex>
 #include <csignal>
 
-#define PROFILE 0
+#define PROFILE 1
 #include "Timer.h"

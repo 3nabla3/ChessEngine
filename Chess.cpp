@@ -29,7 +29,7 @@ bool Chess::IsGameOver() const {
 }
 
 Chess& Chess::ApplyMove(const Move& move) {
-	if (!IsMoveLegal(move)) {
+	if (not IsMoveLegal(move)) {
 		std::cout << "Move is not legal!" << std::endl;
 		std::cout << move << std::endl;
 		exit(1);
