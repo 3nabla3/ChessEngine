@@ -2,46 +2,50 @@
 #include "Chess.h"
 #include "Engine.h"
 #include "NetworkHandler.h"
+#include "BoardOptimized.h"
+
+// consteval std::array<uint64_t, 64> GenerateValues() {
+// 	std::array<uint64_t, 64> values{};
+// 	for (int i = 0; i < 64; i++) {
+// 		values[i] = 1ULL << i;
+// 	}
+// 	return values;
+// }
+//
+// std::array<uint64_t, 64> values = GenerateValues();
+//
+
+
 
 int main() {
+	BoardOptimized b("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+	BoardOptimized::PrintBitBoard(b.GetWhiteKnights());
 
-	Network::Init("172.20.10.2:5000");
-
-	// Network::LoginResponse loginResp = Network::Login("Alban");
-	// std::cout << "Login status code " << loginResp.statusCode << std::endl;
-	// Player playing = loginResp.player;
-	// std::cout << "Playing as " << playing << std::endl;
-	// Player playing = Player::White;
-
-	Chess c;
-	Engine mm(c);
-
-	{
-		std::cout << "Thinking..." << std::endl;
-		PROFILE_SCOPE;
-		auto [move, score, mate_in] = mm.GetBestMove();
-		std::cout << "Sending " << move << "[ " << score << " ]" << std::endl;
-	}
-
-	Timer::PrintDurations();
-
-	// while (not c.IsGameOver()) {
-	// 	std::cout << c.GetBoard().GetFen() << std::endl;
-	// 	if (c.GetBoard().GetCurrentPlayer() == playing) {
-	// 		std::cout << "Thinking..." << std::endl;
-	// 		auto [move, score, mate_in] = mm.GetBestMove();
-	// 		mm.ApplyMove(move);
-	// 		std::cout << "Sending " << move << "[ " << score << " ]" << std::endl;
-	// 		Network::HttpResponse resp = Network::SendMove(move);
-	// 		std::cout << "Status: " << resp.statusCode << std::endl;
-	// 		if (resp.statusCode != Network::StatusCode::OK)
-	// 			break;
-	// 	} else {
-	// 		Move move = Network::GetMove();
-	// 		std::cout << "Received " << move << std::endl;
-	// 		mm.ApplyMove(move);
-	// 	}
-	// }
-
-	std::cout << c.GetPGN() << std::endl;
+// 	Network::Init("172.20.10.2:5000");
+// 	Network::LoginResponse r = Network::Login("alban");
+// 	std::cout << "Playing as " << r.player << '\n';
+// 	Player player = r.player;
+//
+// 	Chess c;
+// 	Engine mm(c);
+//
+// 	while (not c.IsGameOver()) {
+// 		std::cout << c << '\n';
+// 		if (c.GetBoard().GetCurrentPlayer() == player) {
+// 			auto move = c.GetRandomLegalMove();
+// 			std::cout << "Playing " << move << '\n';
+// 			auto resp = Network::SendMove(move);
+// 			if (resp.statusCode != Network::StatusCode::OK)
+// 				std::cout << "ERROR: " << resp.statusCode << '\n';
+// 			mm.ApplyMove(move);
+// 		}
+// 		else {
+// 			Move move = Network::GetMove();
+// 			std::cout << "Received " << move << '\n';
+// 			mm.ApplyMove(move);
+// 		}
+// 	}
+//
+// 	std::cout << c.GetPGN() << '\n';
 }
+
